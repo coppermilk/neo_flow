@@ -1,0 +1,21 @@
+from PIL import Image
+
+def get_gif_info(file_path):
+    with Image.open(file_path) as img:
+        # Получаем длительность анимации в миллисекундах
+        duration = img.info['duration']
+        
+        # Получаем количество кадров
+        num_frames = img.n_frames
+        
+        # Получаем размеры изображения
+        width, height = img.size
+        
+        return duration, num_frames, width, height
+
+if __name__ == "__main__":
+    gif_file = "example.gif"  # Укажите путь к вашему GIF-файлу
+    duration, num_frames, width, height = get_gif_info(gif_file)
+    print(f"Длительность анимации: {duration} миллисекунд")
+    print(f"Количество кадров: {num_frames}")
+    print(f"Размеры изображения: {width}x{height} пикселей")

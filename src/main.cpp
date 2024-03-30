@@ -1,15 +1,21 @@
-#include <Arduino.h>
-#include <font.h>
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_NeoPixel.h>
-#include <vector>
-#include <map>
-#include <Fonts/FreeMonoBoldOblique12pt7b.h>
-#include "google_sheets_downloader.h"
-#include <WiFi.h>
-#include <WiFiUdp.h>
+#include <Arduino.h>
 #include <ArduinoJson.h>
+#include <FileDownloader.h>
+#include <Fonts/FreeMonoBoldOblique12pt7b.h>
+#include <HTTPClient.h>
+#include <ImageConvector.h>
+#include <ImageDatabase.h>
 #include <ImageInfo.h>
+#include <SD.h>
+#include <SPI.h>
+#include <SdCard.h>
+#include <WiFiUdp.h>
+#include <font.h>
+#include <google_sheets_downloader.h>
+#include <map>
+#include <vector>
 
 const char *ssid = "UPCED7EFB8";       // type your wifi name
 const char *password = "tFax8Er3yycw"; // Type your wifi password
@@ -17,27 +23,35 @@ const char *password = "tFax8Er3yycw"; // Type your wifi password
 #define MATRIX_W 32
 #define MATRIX_H 8
 
-Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(MATRIX_W, MATRIX_H, PIN_MATRIX,
-                                               NEO_MATRIX_TOP + NEO_MATRIX_LEFT + NEO_MATRIX_COLUMNS + NEO_MATRIX_ZIGZAG,
-                                               NEO_GRB + NEO_KHZ800);
+unsigned long msGlobalPrevious = 0;
+Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(MATRIX_W,
+                                               MATRIX_H,
+                                               PIN_MATRIX,
+                                               NEO_MATRIX_TOP +
+                                                   NEO_MATRIX_LEFT +
+                                                   NEO_MATRIX_COLUMNS +
+                                                   NEO_MATRIX_ZIGZAG,
+                                               NEO_GRB +
+                                                   NEO_KHZ800);
 
-#include <SPI.h>
-#include <SD.h>
-#include <WiFi.h>
-#include <HTTPClient.h>
-#include <SdCard.h>
-#include <ImageConvector.h>
-#include "FileDownloader.h"
-#include "ImageDatabase.h"
+enum Align : unsigned
+{
+  center = 0,
+  left,
+  right,
+};
 
-void drawImage(const String &fileName);
+void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const Align a = Align::left);
+void getImage(const String &fileName, Image &img);
 
 void drawCentreString(String buf, int x = 0, int y = 8)
 {
   matrix.setCursor(0, 0);
   int16_t x1, y1;
   uint16_t w, h;
-  matrix.getTextBounds(buf, x, y, &x1, &y1, &w, &h); // calc width of new string
+
+  // calc width of new string
+  matrix.getTextBounds(buf, x, y, &x1, &y1, &w, &h);
   matrix.setCursor((matrix.width() - w / 2), y);
   matrix.print(buf);
 }
@@ -79,13 +93,15 @@ void setup()
 
   Serial.begin(9600);
   Serial.println("Initialization done.");
-
+  Image img;
+  getImage("https://raw.githubusercontent.com/coppermilk/neo_flow/main/img/frames/12931_icon_thumb_12931_icon_thumb_12f_100ms.sprite.bmp", img);
   // Connect to WiFi
   WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi");
+  size_t frame = 0;
   while (WiFi.status() != WL_CONNECTED)
   {
-    drawImage("https://raw.githubusercontent.com/coppermilk/img/main/img/10813_icon_thumb_10813_icon_thumb_20f_100ms.sprite.bmp");
+    drawImage(img, msGlobalPrevious, frame, center);
     Serial.print(".");
   }
   Serial.println("WiFi connected");
@@ -127,12 +143,15 @@ uint16_t ramp(uint16_t pixelValue)
   }
 }
 
-void drawImage(const String &fileName)
+void getImage(const String &fileName, Image &img)
 {
   ImageDatabase db;
-  Image imgMatrix;
-  db.createImageMatrix(fileName, imgMatrix);
-  auto &info = imgMatrix.info;
+  db.createImageMatrix(fileName, img);
+  // auto &info = imgMatrix.info;
+}
+
+void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const Align a)
+{
 
 #if 0
   Serial.println(imgMatrix.img.size());
@@ -148,35 +167,56 @@ void drawImage(const String &fileName)
   Serial.print("isSprite: ");
   Serial.println(info.isSprite);
 #endif
-
-  if (info.isSprite)
+  auto &info = imgMatrix.info;
+  if (imgMatrix.info.isSprite)
   {
-    unsigned long msPrevious = 0;
     const unsigned long msInterval = info.msFrameDuration;
-    size_t frame = 0;
 
-    while (true)
+    // while (true)
+    //{
+    unsigned long msCurrent = millis();
+
+    if (msCurrent - msPrevious >= msInterval)
     {
-      unsigned long msCurrent = millis();
+      msPrevious = msCurrent;
+      // Increment frame and wrap around
+      frame = (frame + 1) % info.cntFrames;
 
-      if (msCurrent - msPrevious >= msInterval)
+      for (size_t x = 0; x < info.w; ++x)
       {
-        msPrevious = msCurrent;
-        // Increment frame and wrap around
-        frame = (frame + 1) % info.cntFrames;
-
-        for (size_t x = 0; x < info.w; ++x)
+        for (size_t y = 0; y < info.h; ++y)
         {
-          for (size_t y = 0; y < info.h; ++y)
+          auto color = imgMatrix.img[x + (frame * info.w)][y];
+          color = ramp(color);
+          size_t xOffset = 0;
+          size_t yOffset = 0;
+          switch (a)
           {
-            auto color = imgMatrix.img[x + (frame * info.w)][y];
-            color = ramp(color);
-            matrix.drawPixel(x, y, color);
+          case Align::center:
+          {
+            xOffset = ((matrix.width() - info.w) / 2) + x;
+            yOffset = y;
+            break;
           }
+          case Align::left:
+          {
+            xOffset = x;
+            yOffset = y;
+            break;
+          }
+          case Align::right:
+          {
+            xOffset = matrix.width() - info.w + x;
+            yOffset = matrix.height() - info.h + y;
+            break;
+          }
+          }
+          matrix.drawPixel(xOffset, yOffset, color);
         }
-        matrix.show();
       }
+      matrix.show();
     }
+    // }
   }
   else
   {
@@ -196,9 +236,16 @@ void loop()
 {
   // 22453
   ImageDatabase db;
-  //String fileName = "https://raw.githubusercontent.com/coppermilk/img/main/img/10813_icon_thumb_10813_icon_thumb_20f_100ms.sprite.bmp";
-  String fileName = "https://raw.githubusercontent.com/coppermilk/esp32_pixelflow/master/src/86.bmp";
-  drawImage(fileName);
+
+  String fileName = "https://raw.githubusercontent.com/coppermilk/img/main/img/10813_icon_thumb_10813_icon_thumb_20f_100ms.sprite.bmp";
+  // String fileName = "https://raw.githubusercontent.com/coppermilk/neo_flow/main/img/frames/12931_icon_thumb_12931_icon_thumb_12f_100ms.sprite.bmp";
+  size_t frame = 0;
+  Image img;
+  getImage(fileName, img);
+  while (true)
+  {
+    drawImage(img, msGlobalPrevious, frame);
+  }
 
 #if 0
   const char *imageName = "231_icon_thumb_2f_1000ms.sprite.bmp";
