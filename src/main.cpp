@@ -105,6 +105,7 @@ void setup()
     Serial.print(".");
   }
   Serial.println("WiFi connected");
+  matrix.fillScreen(0);
 }
 
 void drawAccumulateProgressBackGround(int pixel_count, uint16_t color)
