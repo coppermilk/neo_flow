@@ -19,9 +19,9 @@ public:
                 result += fromSource[i];
             }
         }
-        Serial.print(fromSource);
-        Serial.print(" -> ");
-        Serial.println(result);
+        //Serial.print(fromSource);
+        //Serial.print(" -> ");
+        //Serial.println(result);
         return result;
     }
 };

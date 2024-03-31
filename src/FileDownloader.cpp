@@ -9,7 +9,7 @@ bool FileDownloader::DownloadFileFromUrlToSd(const char *imageUrl, SdCard &sd, c
   
     if (sd.fileExst(fullName.c_str()))
     {
-        Serial.println("File: \"" + fullName + "\" is already exists, skipping download.");
+        //Serial.println("File: \"" + fullName + "\" is already exists, skipping download.");
         return true;
     }
     else

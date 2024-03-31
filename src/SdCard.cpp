@@ -2,7 +2,7 @@
 
 SdCard::SdCard()
 {
-    printf("Initializing SD card...\n");
+    //printf("Initializing SD card...\n");
     if (!SD.begin(PIN_SD_CARD_CS))
     {
         Serial.println("Initialization failed!");
@@ -36,7 +36,7 @@ SdCard::SdCard()
         Serial.println("Directory created: /img/sprite");
     }
 
-    Serial.println("Initialization done.");
+   // Serial.println("Initialization done.");
 }
 
 void SdCard::writeFile(const char *fileName, Stream *fromStream)

@@ -118,7 +118,7 @@ ImageInfo ImageDatabase::getImgInfoFromFileName(const String &fileName, ImageInf
 
     for (const auto &token : splittedName)
     {
-        Serial.println(token);
+       // Serial.println(token);
         if (token.endsWith("ms"))
         {
             info.msFrameDuration = dirtyStringToInt(token);

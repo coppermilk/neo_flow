@@ -16,12 +16,18 @@
 #include <google_sheets_downloader.h>
 #include <map>
 #include <vector>
+#include <NTPClient.h>
+#include <calendar_activity.h>
+#include <GlobalVariable.h>
 
 const char *ssid = "UPCED7EFB8";       // type your wifi name
 const char *password = "tFax8Er3yycw"; // Type your wifi password
 #define PIN_MATRIX 25
 #define MATRIX_W 32
 #define MATRIX_H 8
+
+static WiFiUDP ntpUDP;
+static NTPClient timeClient(ntpUDP);
 
 unsigned long msGlobalPrevious = 0;
 Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(MATRIX_W,
@@ -46,6 +52,7 @@ void getImage(const String &fileName, Image &img);
 
 void drawCentreString(String buf, int x = 0, int y = 8)
 {
+
   matrix.setCursor(0, 0);
   int16_t x1, y1;
   uint16_t w, h;
@@ -104,8 +111,52 @@ void setup()
     drawImage(img, msGlobalPrevious, frame, center);
     Serial.print(".");
   }
+  timeClient.begin();
+  Serial.print("Time update");
+  while (!timeClient.update())
+  {
+    Serial.print(".");
+  }
+
+  Serial.println(timeClient.getFormattedTime());
   Serial.println("WiFi connected");
   matrix.fillScreen(0);
+}
+
+unsigned int colorStringToUInt(String colorString)
+{
+  // Remove any leading '#' character
+  colorString.trim();
+  if (colorString.startsWith("#"))
+  {
+    colorString = colorString.substring(1);
+  }
+
+  // Convert the hex string to an unsigned int
+  unsigned int colorValue = 0;
+  for (int i = 0; i < colorString.length(); i++)
+  {
+    char c = colorString.charAt(i);
+    if ('0' <= c && c <= '9')
+    {
+      colorValue = (colorValue << 4) + (c - '0');
+    }
+    else if ('a' <= c && c <= 'f')
+    {
+      colorValue = (colorValue << 4) + (c - 'a' + 10);
+    }
+    else if ('A' <= c && c <= 'F')
+    {
+      colorValue = (colorValue << 4) + (c - 'A' + 10);
+    }
+    else
+    {
+      // Invalid character
+      return 0;
+    }
+  }
+
+  return colorValue;
 }
 
 void drawAccumulateProgressBackGround(int pixel_count, uint16_t color)
@@ -151,7 +202,7 @@ void getImage(const String &fileName, Image &img)
   // auto &info = imgMatrix.info;
 }
 
-void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const Align a)
+void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const Align align)
 {
 
 #if 0
@@ -169,6 +220,37 @@ void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const
   Serial.println(info.isSprite);
 #endif
   auto &info = imgMatrix.info;
+  int xOffset = 0;
+  int yOffset = 0;
+  switch (align)
+  {
+  case Align::center:
+  {
+    xOffset = ((matrix.width() - info.w) / 2);
+    yOffset = 0;
+    break;
+  }
+  case Align::left:
+  {
+    xOffset = 0;
+    yOffset = 0;
+    break;
+  }
+  case Align::right:
+  {
+    xOffset = matrix.width() - info.w + 0;
+    yOffset = matrix.height() - info.h + 0;
+    break;
+  }
+
+    // }
+  }
+#if 0
+  Serial.print("xOffset: ");
+  Serial.println(xOffset);
+  Serial.print("yOffset ");
+  Serial.println(yOffset);
+#endif
   if (imgMatrix.info.isSprite)
   {
     const unsigned long msInterval = info.msFrameDuration;
@@ -189,35 +271,10 @@ void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const
         {
           auto color = imgMatrix.img[x + (frame * info.w)][y];
           color = ramp(color);
-          size_t xOffset = 0;
-          size_t yOffset = 0;
-          switch (a)
-          {
-          case Align::center:
-          {
-            xOffset = ((matrix.width() - info.w) / 2) + x;
-            yOffset = y;
-            break;
-          }
-          case Align::left:
-          {
-            xOffset = x;
-            yOffset = y;
-            break;
-          }
-          case Align::right:
-          {
-            xOffset = matrix.width() - info.w + x;
-            yOffset = matrix.height() - info.h + y;
-            break;
-          }
-          }
-          matrix.drawPixel(xOffset, yOffset, color);
+          matrix.drawPixel(xOffset + x, yOffset + y, color);
         }
       }
-      matrix.show();
     }
-    // }
   }
   else
   {
@@ -226,15 +283,59 @@ void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const
       for (size_t y = 0; y < info.h; ++y)
       {
         auto color = imgMatrix.img[x][y];
-        matrix.drawPixel(x, y, color);
+        matrix.drawPixel(xOffset + x, yOffset + y, color);
       }
     }
-    matrix.show();
   }
 }
 
 void loop()
 {
+  GoogleSheetsDownloader downloader("AKfycbwc-E7dJE0IzJ5tjiMTiWWpzX4ZXj1hI_NM5-MG3x1BgaLWtj4F-f2HgqR9ZAqi9lV5lQ");
+  String json_str = downloader.get_json();
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, json_str);
+
+  if (error)
+  {
+    Serial.print("deserializeJson() failed: ");
+    Serial.println(error.f_str());
+    return;
+  }
+  JsonArray dailys = doc[JSON_LIST_DAILY];
+  for (const JsonObject &daily : dailys)
+  {
+
+    CalendarActivity calendarActivity(daily, timeClient.getEpochTime(), 8, 32, &matrix);
+    calendarActivity.drawCalendar();
+    size_t frame = 0;
+    unsigned long msInterval = 10 * 1000;
+    unsigned long msStart = millis();
+
+    while (millis() < msStart + msInterval)
+    {
+      calendarActivity.drawCalendar();
+      if (!calendarActivity.isHasValueToday())
+      {
+        matrix.drawPixel(calendarActivity.getXToday(), calendarActivity.getYToday(), rand());
+      }
+
+      Image img;
+      getImage(calendarActivity.getIcon(), img);
+      drawImage(img, msGlobalPrevious, frame, left);
+
+      //Serial.print("Frame: ");
+      //Serial.print(frame);
+
+      //Serial.print("Frame: ");
+      //Serial.print(frame);
+
+      matrix.show();
+    }
+    matrix.fillScreen(0);
+  }
+
+  return;
   // 22453
   ImageDatabase db;
 
@@ -245,7 +346,7 @@ void loop()
   getImage(fileName, img);
   while (true)
   {
-    drawImage(img, msGlobalPrevious, frame);
+    drawImage(img, msGlobalPrevious, frame, left);
   }
 
 #if 0
@@ -259,7 +360,7 @@ void loop()
 
  
   // auto imgMatrix = db.createImageMatrix("https://raw.githubusercontent.com/coppermilk/img/main/img/4449.bmp");
-  GoogleSheetsDownloader downloader("AKfycbzBdut8M7Xa4N57l_t1mgDhUHPCQLc0IqzwdJX_9bK_0Ve2xn2xQ3vMptxW8bE1Wr7KOw");
+  GoogleSheetsDownloader downloader("AKfycbzHaM4gtd83bzdSqMTw86lydsu2_ekZub4z-S1eCMpQw8guI1AaVqZOmb-6nLBLPRNNxg");
   String json = downloader.get_json();
 
   Serial.println(json);
