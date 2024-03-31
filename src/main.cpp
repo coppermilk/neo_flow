@@ -110,6 +110,7 @@ void setup()
   {
     drawImage(img, msGlobalPrevious, frame, center);
     Serial.print(".");
+    matrix.show();
   }
   timeClient.begin();
   Serial.print("Time update");
@@ -291,7 +292,7 @@ void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const
 
 void loop()
 {
-  GoogleSheetsDownloader downloader("AKfycbwc-E7dJE0IzJ5tjiMTiWWpzX4ZXj1hI_NM5-MG3x1BgaLWtj4F-f2HgqR9ZAqi9lV5lQ");
+  GoogleSheetsDownloader downloader("AKfycbzARVm6CShUuEXM_Rg3plyliO1jg4tNb4VQ2vznvb7moZZ3FOrOBIsjdkCo_DZA61Zcgw");
   String json_str = downloader.get_json();
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, json_str);
@@ -309,13 +310,13 @@ void loop()
     CalendarActivity calendarActivity(daily, timeClient.getEpochTime(), 8, 32, &matrix);
     calendarActivity.drawCalendar();
     size_t frame = 0;
-    unsigned long msInterval = 10 * 1000;
+    unsigned long msInterval = 20 * 1000;
     unsigned long msStart = millis();
 
     while (millis() < msStart + msInterval)
     {
       calendarActivity.drawCalendar();
-      if (!calendarActivity.isHasValueToday())
+      if (calendarActivity.isNeedTodayNotification())
       {
         matrix.drawPixel(calendarActivity.getXToday(), calendarActivity.getYToday(), rand());
       }
@@ -324,71 +325,31 @@ void loop()
       getImage(calendarActivity.getIcon(), img);
       drawImage(img, msGlobalPrevious, frame, left);
 
-      //Serial.print("Frame: ");
-      //Serial.print(frame);
-
-      //Serial.print("Frame: ");
-      //Serial.print(frame);
-
       matrix.show();
     }
     matrix.fillScreen(0);
+    Serial.println("NextDayly");
   }
 
-  return;
-  // 22453
+  Serial.println("NextStep");
+
   ImageDatabase db;
-
-  String fileName = "https://raw.githubusercontent.com/coppermilk/img/main/img/10813_icon_thumb_10813_icon_thumb_20f_100ms.sprite.bmp";
-  // String fileName = "https://raw.githubusercontent.com/coppermilk/neo_flow/main/img/frames/12931_icon_thumb_12931_icon_thumb_12f_100ms.sprite.bmp";
-  size_t frame = 0;
-  Image img;
-  getImage(fileName, img);
-  while (true)
-  {
-    drawImage(img, msGlobalPrevious, frame, left);
-  }
-
-#if 0
-  const char *imageName = "231_icon_thumb_2f_1000ms.sprite.bmp";
-  ImageInfo info = parseFileName(imageName);
-
-  Serial.print("Frame: ");
-  Serial.println(info.cntFrames);
-  Serial.print("Milliseconds: ");
-  Serial.println(info.msFrameDuration);
-
- 
-  // auto imgMatrix = db.createImageMatrix("https://raw.githubusercontent.com/coppermilk/img/main/img/4449.bmp");
-  GoogleSheetsDownloader downloader("AKfycbzHaM4gtd83bzdSqMTw86lydsu2_ekZub4z-S1eCMpQw8guI1AaVqZOmb-6nLBLPRNNxg");
-  String json = downloader.get_json();
-
-  Serial.println(json);
-
-  JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, json);
-
-  if (error)
-  {
-    Serial.print("deserializeJson() failed: ");
-    Serial.println(error.f_str());
-    return;
-  }
-
-  JsonArray accumulate_progress = doc["accumulate_progress"];
+  JsonArray accumulate_progress = doc[JSON_LIST_ACCUMULATE_PROGRESS];
   for (JsonObject obj : accumulate_progress)
   {
-    const char *activity_name = obj["activity_name"];
-    const char *color = obj["color"];
-    const char *img_url = obj["img_url"];
-    int value = obj["value"].as<int>(); // Parse value as float
+    const char *activity_name = obj[JSON_NAME];
+    const char *color = obj[JSON_COLOR];
+    const char *img_url = obj[JSON_IMG_URL];
+    int value = obj[JSON_VALUE].as<int>(); // Parse value as float
     matrix.fillScreen(0);
-    drawAccumulateProgressBackGround(value, convertARGBtoRGB(color));
+    auto decColor = ImageConvector::HexToDec(color);
+    Pixel p(decColor);
+    drawAccumulateProgressBackGround(value, p.asUint16_t());
     if (img_url)
     {
-
-      auto imgMatrix = db.createImageMatrix(img_url);
-      drawCenterImg(imgMatrix);
+      Image img;
+      db.createImageMatrix(img_url, img);
+      drawCenterImg(img.img);
     }
     Serial.print("Img url");
     Serial.println(img_url);
@@ -406,33 +367,41 @@ void loop()
   }
 
   matrix.fillScreen(0);
-  JsonArray info_string = doc["info_string"];
+  JsonArray info_string = doc[JSON_LIST_INFO_STRING];
   for (JsonObject obj : info_string)
   {
-    const char *activity_name = obj["activity_name"];
-    const char *color = obj["color"];
-    String value = obj["value"].as<String>(); // Parse value as float
-    const char *img_url = obj["img_url"];
+    const char *activity_name = obj[JSON_NAME];
+    const char *color = obj[JSON_COLOR];
+    String value = obj[JSON_VALUE].as<String>(); // Parse value as float
+    const char *img_url = obj[JSON_IMG_URL];
 
     Serial.print("Activity Name: ");
     Serial.println(activity_name);
 
     if (img_url)
     {
-      auto imgMatrix = db.createImageMatrix(img_url);
-      drawLeftrImg(imgMatrix);
+      Image img;
+      db.createImageMatrix(img_url, img);
+      unsigned long msInterval = 20 * 1000;
+      unsigned long msStart = millis();
+      size_t frame = 0;
+      matrix.setCursor(9, 8);
+      matrix.print(value);
+      
+      while (millis() < msStart + msInterval)
+      {
+
+        Image img;
+        getImage(img_url, img);
+        drawImage(img, msGlobalPrevious, frame, left);
+
+        matrix.show();
+      }
+      matrix.fillScreen(0);
+      Serial.println("NextDayly");
     }
-    // drawCentreString(String(value));
-    matrix.setCursor(12, 8);
-    matrix.print(value);
-    Serial.print("Color: ");
-    Serial.println(color);
-    Serial.print("Value: ");
-    Serial.println(value);
-    Serial.println();
-    matrix.show();
-    delay(10000);
-    matrix.fillScreen(0);
   }
-#endif
+  
+  matrix.fillScreen(0);
 }
+

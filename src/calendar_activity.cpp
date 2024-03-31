@@ -12,12 +12,12 @@ CalendarActivity::remove_hour_min_sec(TimeStamp time)
 
 void CalendarActivity::drawCalendar()
 {
-  //Serial.println("Strang Foo...");
+  // Serial.println("Strang Foo...");
 
   const int OFFSET_DAYS = 6 - get_weekday(_today);
   const TimeStamp last_comming_day = _today + (86400ULL * OFFSET_DAYS);
- // Serial.print("LastComming day");
-  //Serial.print(last_comming_day);
+  // Serial.print("LastComming day");
+  // Serial.print(last_comming_day);
 
   // std::vector<std::vector<Pixel>> cur_frame(ROWS, std::vector<Pixel>(COLS));
   // std::pair<int, int> min_max = get_min_max_value();
@@ -45,7 +45,7 @@ void CalendarActivity::drawCalendar()
       {
         _xToday = x;
         _yToday = y;
-        _isHasValueToday = values;
+        _isNeedTodayNotification = !values && isNeedValueToday(get_weekday(_today- 86400ULL));
       }
     }
   }
@@ -131,6 +131,21 @@ void CalendarActivity::update(const JsonObject &json)
   Serial.print("MaxPixel: ");
   Serial.println(_maxPixel.rgb);*/
   _iconUrl = json[JSON_IMG_URL].as<String>();
+
+  _mo = json[JSON_WEEKDAYS_MO].as<bool>();
+  _tu = json[JSON_WEEKDAYS_TU].as<bool>();
+  _we = json[JSON_WEEKDAYS_WE].as<bool>();
+  _th = json[JSON_WEEKDAYS_TH].as<bool>();
+  _fr = json[JSON_WEEKDAYS_FR].as<bool>();
+  _sa = json[JSON_WEEKDAYS_SA].as<bool>();
+  _su = json[JSON_WEEKDAYS_SU].as<bool>();
+  Serial.println(_mo);
+  Serial.println(_tu);
+  Serial.println(_we);
+  Serial.println(_th);
+  Serial.println(_fr);
+  Serial.println(_sa);
+  Serial.println(_su);
 }
 
 Pixel CalendarActivity::map(int x, int in_min, int in_max, Pixel &out_min, Pixel &out_max)
@@ -180,9 +195,34 @@ int CalendarActivity::getYToday()
   return _yToday;
 }
 
-bool CalendarActivity::isHasValueToday()
+bool CalendarActivity::isNeedTodayNotification()
 {
-  return _isHasValueToday;
+  return _isNeedTodayNotification;
+}
+
+bool CalendarActivity::isNeedValueToday(int weekDay)
+{
+  Serial.print("weekday");
+  Serial.println(weekDay);
+  switch (weekDay)
+  {
+  case 0: // sunday
+    return _su;
+  case 1:
+    return _mo;
+  case 2:
+    return _tu;
+  case 3:
+    return _we;
+  case 4:
+    return _th;
+  case 5:
+    return _fr;
+  case 6:
+    return _sa;
+  default:
+    return false;
+  }
 }
 
 #if 0

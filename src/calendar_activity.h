@@ -25,7 +25,9 @@ public:
   String getIcon();
   int getXToday();
   int getYToday();
-  bool isHasValueToday();
+  bool isNeedTodayNotification();
+  bool isNeedValueToday(int weekDay);
+
 private:
   Pixel _minPixel;
   Pixel _maxPixel;
@@ -47,8 +49,16 @@ private:
   // Private methods
   TimeStamp remove_hour_min_sec(TimeStamp time);
   int get_weekday(TimeStamp day);
-  
+
   int _xToday = 0;
   int _yToday = 0;
-  bool _isHasValueToday = false;
+  bool _isNeedTodayNotification = false;
+
+  bool _mo = false;
+  bool _tu = false;
+  bool _we = false;
+  bool _th = false;
+  bool _fr = false;
+  bool _sa = false;
+  bool _su = false;
 };
