@@ -49,4 +49,10 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp"
     }
+    {
+    "cpp-format.executable": "clang-format",
+    "cpp-format.executable.windows": "clang-format",
+    "cpp-format.executable.linux": "clang-format",
+    "cpp-format.executable.osx": "clang-format"
+}
 }

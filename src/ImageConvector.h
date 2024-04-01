@@ -14,5 +14,5 @@ class ImageConvector{
     static uint16_t colorStringToUint16(String colorString);
     static std::vector<std::vector<uint16_t>> rotateImage90(const std::vector<std::vector<uint16_t>> &image);
 
-    static unsigned int HexToDec(const char *source);
+    static unsigned int HexRgbToDec(const char *source);
 };

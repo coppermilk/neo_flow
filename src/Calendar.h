@@ -6,27 +6,43 @@
 #include <map>
 #include <Pixel.h>
 
-class CalendarActivity
+class Calendar
 {
 private:
   using TimeStamp = unsigned long long;
   using Value = int;
 
 public:
-  CalendarActivity(const JsonObject &json, TimeStamp time, unsigned rows, unsigned cols, Adafruit_NeoMatrix *pMatrix);
+  Calendar(const JsonObject &json, TimeStamp time, unsigned rows, unsigned cols, Adafruit_NeoMatrix *pMatrix);
 
-  // Public methods
-  void show();
-  void update(const JsonObject &json);
-  void update(TimeStamp time);
+public:
   void drawCalendar();
+
   void fill_calendarDEBUG();
-  Pixel map(int x, int in_min, int in_max, Pixel &out_min, Pixel &out_max);
+
   String getIcon();
+
   int getXToday();
   int getYToday();
+
   bool isNeedTodayNotification();
   bool isNeedValueToday(int weekDay);
+
+private:
+  void update(TimeStamp time);
+  void update(const JsonObject &json);
+
+  void extractValues(const JsonObject &json);
+  void extractName(const JsonObject &json);
+  void extractPixelColor(const JsonObject &json);
+  void extractIconUrl(const JsonObject &json);
+  void extractWeekdays(const JsonObject &json);
+
+  Pixel map(int x, int in_min, int in_max, Pixel &out_min, Pixel &out_max);
+  int map(int x, int in_min, int in_max, int out_min, int out_max);
+
+  TimeStamp removeHourMinSec(TimeStamp time);
+  int getWeekday(TimeStamp day);
 
 private:
   Pixel _minPixel;
@@ -45,10 +61,6 @@ private:
   unsigned _cols;
   const unsigned _DAYS_IN_WEEK = 7;
   Adafruit_NeoMatrix *_matrix;
-
-  // Private methods
-  TimeStamp remove_hour_min_sec(TimeStamp time);
-  int get_weekday(TimeStamp day);
 
   int _xToday = 0;
   int _yToday = 0;

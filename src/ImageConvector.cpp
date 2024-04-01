@@ -86,7 +86,7 @@ std::vector<std::vector<uint16_t>> ImageConvector::rotateImage90(const std::vect
   return rotatedImage;
 }
 
-unsigned int ImageConvector::HexToDec(const char *hexValue)
+unsigned int ImageConvector::HexRgbToDec(const char *hexValue)
 {
   if (!hexValue)
   {

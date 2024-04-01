@@ -307,22 +307,21 @@ void loop()
   for (const JsonObject &daily : dailys)
   {
 
-    CalendarActivity calendarActivity(daily, timeClient.getEpochTime(), 8, 32, &matrix);
+    Calendar calendarActivity(daily, timeClient.getEpochTime(), 8, 32, &matrix);
     calendarActivity.drawCalendar();
     size_t frame = 0;
     unsigned long msInterval = 20 * 1000;
     unsigned long msStart = millis();
-
+    Image img;
+    getImage(calendarActivity.getIcon(), img);
     while (millis() < msStart + msInterval)
     {
       calendarActivity.drawCalendar();
-      if (calendarActivity.isNeedTodayNotification())
+     // if (calendarActivity.isNeedTodayNotification())
       {
-        matrix.drawPixel(calendarActivity.getXToday(), calendarActivity.getYToday(), rand());
+     //   matrix.drawPixel(calendarActivity.getXToday(), calendarActivity.getYToday(), rand());
       }
 
-      Image img;
-      getImage(calendarActivity.getIcon(), img);
       drawImage(img, msGlobalPrevious, frame, left);
 
       matrix.show();
@@ -342,7 +341,7 @@ void loop()
     const char *img_url = obj[JSON_IMG_URL];
     int value = obj[JSON_VALUE].as<int>(); // Parse value as float
     matrix.fillScreen(0);
-    auto decColor = ImageConvector::HexToDec(color);
+    auto decColor = ImageConvector::HexRgbToDec(color);
     Pixel p(decColor);
     drawAccumulateProgressBackGround(value, p.asUint16_t());
     if (img_url)
@@ -387,7 +386,7 @@ void loop()
       size_t frame = 0;
       matrix.setCursor(9, 8);
       matrix.print(value);
-      
+
       while (millis() < msStart + msInterval)
       {
 
@@ -401,7 +400,6 @@ void loop()
       Serial.println("NextDayly");
     }
   }
-  
+
   matrix.fillScreen(0);
 }
-
