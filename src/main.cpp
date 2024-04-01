@@ -17,7 +17,7 @@
 #include <map>
 #include <vector>
 #include <NTPClient.h>
-#include <calendar_activity.h>
+#include <Calendar.h>
 #include <GlobalVariable.h>
 
 const char *ssid = "UPCED7EFB8";       // type your wifi name
@@ -294,6 +294,7 @@ void loop()
 {
   GoogleSheetsDownloader downloader("AKfycbzARVm6CShUuEXM_Rg3plyliO1jg4tNb4VQ2vznvb7moZZ3FOrOBIsjdkCo_DZA61Zcgw");
   String json_str = downloader.get_json();
+  Serial.println(json_str);
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, json_str);
 
@@ -304,10 +305,12 @@ void loop()
     return;
   }
   JsonArray dailys = doc[JSON_LIST_DAILY];
+
+  auto timeStamp =  timeClient.getEpochTime();
   for (const JsonObject &daily : dailys)
   {
 
-    Calendar calendarActivity(daily, timeClient.getEpochTime(), 8, 32, &matrix);
+    Calendar calendarActivity(daily,timeStamp, 8, 32, &matrix);
     calendarActivity.drawCalendar();
     size_t frame = 0;
     unsigned long msInterval = 20 * 1000;
@@ -317,9 +320,9 @@ void loop()
     while (millis() < msStart + msInterval)
     {
       calendarActivity.drawCalendar();
-     // if (calendarActivity.isNeedTodayNotification())
+      // if (calendarActivity.isNeedTodayNotification())
       {
-     //   matrix.drawPixel(calendarActivity.getXToday(), calendarActivity.getYToday(), rand());
+        //   matrix.drawPixel(calendarActivity.getXToday(), calendarActivity.getYToday(), rand());
       }
 
       drawImage(img, msGlobalPrevious, frame, left);
@@ -329,7 +332,7 @@ void loop()
     matrix.fillScreen(0);
     Serial.println("NextDayly");
   }
-
+#if 0
   Serial.println("NextStep");
 
   ImageDatabase db;
@@ -400,6 +403,6 @@ void loop()
       Serial.println("NextDayly");
     }
   }
-
+  #endif
   matrix.fillScreen(0);
 }

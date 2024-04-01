@@ -26,7 +26,7 @@ public:
   int getYToday();
 
   bool isNeedTodayNotification();
-  bool isNeedValueToday(int weekDay);
+  bool isNeedValueInWeekday(int weekDay);
 
 private:
   void update(TimeStamp time);

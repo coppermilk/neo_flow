@@ -1,52 +1,77 @@
 #include <utility>
-#include "calendar_activity.h"
-#include "ImageConvector.h"
-#include "GlobalVariable.h"
-#include "Pixel.h"
+#include <Calendar.h>
+#include <ImageConvector.h>
+#include <GlobalVariable.h>
+#include <Pixel.h>
 
-Calendar::TimeStamp
-Calendar::removeHourMinSec(TimeStamp time)
-{
-  return (time / 86400L) * 86400L;
-}
+#define DAY 86400ULL
 
 void Calendar::drawCalendar()
 {
-  const int OFFSET_DAYS = 6 - getWeekday(_today);
-  const TimeStamp last_comming_day = _today + (86400ULL * OFFSET_DAYS);
+  const int todayWeekday =  getWeekday(_today);
+  const int cntFutureDays = 6 - todayWeekday;
+  const TimeStamp deltaFutureDays = DAY * cntFutureDays;
+  const TimeStamp lastCommingDay = _today + deltaFutureDays;
+  /*for(int x = 31; x >= 9; --x)
+  {
+    for(int y = 7; y >= 0; --y)
+    {
+      31 - x;
+    }
+ /*}*/
+  
 
   for (unsigned y = 0; y < _DAYS_IN_WEEK; ++y)
   {
-    for (unsigned x = 8; x < _cols; ++x)
+    for (unsigned x = 9; x < _cols; ++x)
     {
-      int index = _DAYS_IN_WEEK * (_cols - x) - y;
+      const int remainingColumns = _cols - x;
+      const int scaledColumns = 7 * remainingColumns;
+      const int cntCurDay = scaledColumns - y;
+      TimeStamp deltaCurDay = DAY * cntCurDay;
 
-      TimeStamp dateKey = last_comming_day - (86400ULL * index);
-
+      TimeStamp dateKey = lastCommingDay - deltaCurDay;
       Value values = _timeStampToValue[dateKey];
 
+      if(x ==31){
+      Serial.print(x);
+          Serial.print(":");
+          Serial.print(y);
+          Serial.print("Datakey");
+          Serial.println(dateKey);
+      }
+    
       if (values)
       {
-
         Pixel pixel = map(values, _minVal, _maxVal, _minPixel, _maxPixel);
         _matrix->drawPixel(x, y, pixel.asUint16_t());
+
       }
-      else if (isNeedValueToday(getWeekday(dateKey)))
+      else if (isNeedValueInWeekday(getWeekday(dateKey)))
       {
-        if (_today != dateKey)
+        if (_today == dateKey)
         {
-          _matrix->drawPixel(x, y, 0x10A2);
+          
+                _xToday = x;
+          _yToday = y;
+          _isNeedTodayNotification = true;
+          _matrix->drawPixel(x, y, rand());
         }
         else
         {
-          _xToday = x;
-          _yToday = y;
-          _isNeedTodayNotification = isNeedValueToday(getWeekday(dateKey));
-          //_matrix->drawPixel(x, y, rand());
+    _matrix->drawPixel(x, y, 0x10A2);
         }
       }
+      _matrix->show();
+      delay(4);
     }
   }
+
+}
+
+Calendar::TimeStamp Calendar::removeHourMinSec(TimeStamp time)
+{
+  return (time / DAY) * DAY;
 }
 
 void Calendar::fill_calendarDEBUG()
@@ -56,22 +81,25 @@ void Calendar::fill_calendarDEBUG()
 
   for (int i = 0; i < (_cols * _rows - offset); ++i)
   {
-    _timeStampToValue[_today - (i * 86400L)] = i + 1;
+    _timeStampToValue[_today - (i * DAY)] = i + 1;
   }
 }
 
 int Calendar::getWeekday(TimeStamp timeStamp)
 {
   // 1 Jan 1970 was a Thursday, so add 4 so Sunday is day 0, and mod 7
-  TimeStamp days = timeStamp / 86400ULL;
+  TimeStamp days = timeStamp / DAY;
   return (days + 4) % 7; // 0 is Sunday
 }
 
-Calendar::Calendar(const JsonObject &json, TimeStamp time, unsigned rows, unsigned cols, Adafruit_NeoMatrix *pMatrix)
+Calendar::Calendar(const JsonObject &json,
+                   TimeStamp time,
+                   unsigned rows,
+                   unsigned cols,
+                   Adafruit_NeoMatrix *pMatrix)
+
+    : _matrix(pMatrix), _rows(rows), _cols(cols)
 {
-  _matrix = pMatrix;
-  _rows = rows;
-  _cols = cols;
   update(json);
   update(time);
 }
@@ -92,9 +120,11 @@ void Calendar::update(const JsonObject &json)
 
 void Calendar::extractValues(const JsonObject &json)
 {
+  // Reset values
   _timeStampToValue.clear();
   _minVal = 0;
   _maxVal = 0;
+
   JsonArray dataPoints = json[JSON_DATA_POINTS];
   for (const JsonObject &dataPoint : dataPoints)
   {
@@ -189,7 +219,7 @@ bool Calendar::isNeedTodayNotification()
   return _isNeedTodayNotification;
 }
 
-bool Calendar::isNeedValueToday(int weekDay)
+bool Calendar::isNeedValueInWeekday(int weekDay)
 {
   switch (weekDay)
   {
