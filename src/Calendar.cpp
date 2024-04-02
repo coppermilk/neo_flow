@@ -10,7 +10,7 @@ void Calendar::drawCalendar()
 {
   const int todayWeekday =  getWeekday(_today);
   const int cntFutureDays = 6 - todayWeekday;
-  const TimeStamp deltaFutureDays = DAY * cntFutureDays;
+  const TimeStamp deltaFutureDays = DAY * (cntFutureDays+1);
   const TimeStamp lastCommingDay = _today + deltaFutureDays;
   /*for(int x = 31; x >= 9; --x)
   {
@@ -19,7 +19,43 @@ void Calendar::drawCalendar()
       31 - x;
     }
  /*}*/
+
+  int dayOffset = 0;
+   for (unsigned x = _cols; x--; ) {
+        for (unsigned y = _DAYS_IN_WEEK; y--; ) {
+   
+
+      TimeStamp dateKey = lastCommingDay  - (DAY * ++dayOffset);
+      Value values = _timeStampToValue[dateKey];
+   
+      if (values)
+      {
+        Pixel pixel = map(values, _minVal, _maxVal, _minPixel, _maxPixel);
+        _matrix->drawPixel(x, y, pixel.asUint16_t());
+      }
+      else if (isNeedValueInWeekday(getWeekday(dateKey)))
+      {
+        if (_today == dateKey)
+        {
+          
+          _xToday = x;
+          _yToday = y;
+          _isNeedTodayNotification = true;
+          _matrix->drawPixel(x, y, rand());
+        }
+        else
+        {
+    _matrix->drawPixel(x, y, 0x10A2);
+        }
+      }
+     // _matrix->show();
+     // delay(4);
+
+           
+        }
+    }
   
+  #if 0
 
   for (unsigned y = 0; y < _DAYS_IN_WEEK; ++y)
   {
@@ -66,11 +102,12 @@ void Calendar::drawCalendar()
       delay(4);
     }
   }
-
+  #endif
 }
 
 Calendar::TimeStamp Calendar::removeHourMinSec(TimeStamp time)
 {
+  time = time + 3600;
   return (time / DAY) * DAY;
 }
 
@@ -87,8 +124,8 @@ void Calendar::fill_calendarDEBUG()
 
 int Calendar::getWeekday(TimeStamp timeStamp)
 {
-  // 1 Jan 1970 was a Thursday, so add 4 so Sunday is day 0, and mod 7
-  TimeStamp days = timeStamp / DAY;
+  // 1 Jan 1970 was a Thursday (4 index), so add 4 so Sunday is day 0, and mod 7
+  const TimeStamp days = timeStamp / DAY;
   return (days + 4) % 7; // 0 is Sunday
 }
 

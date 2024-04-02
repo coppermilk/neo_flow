@@ -317,12 +317,13 @@ void loop()
     unsigned long msStart = millis();
     Image img;
     getImage(calendarActivity.getIcon(), img);
+    calendarActivity.drawCalendar();
     while (millis() < msStart + msInterval)
     {
-      calendarActivity.drawCalendar();
-      // if (calendarActivity.isNeedTodayNotification())
+
+      if (calendarActivity.isNeedTodayNotification())
       {
-        //   matrix.drawPixel(calendarActivity.getXToday(), calendarActivity.getYToday(), rand());
+           matrix.drawPixel(calendarActivity.getXToday(), calendarActivity.getYToday(), rand());
       }
 
       drawImage(img, msGlobalPrevious, frame, left);
