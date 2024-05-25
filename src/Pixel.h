@@ -1,7 +1,7 @@
-#pragma once
+#ifndef PIXEL_H
+#define PIXEL_H
 
 #include "Arduino.h"
-
 class Pixel
 {
 public:
@@ -24,3 +24,5 @@ public:
 
     uint16_t asUint16_t();
 };
+
+#endif // PIXEL_H

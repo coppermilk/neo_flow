@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include <unity.h>
 
-#include "test_Pixel.hpp"
+#include "Pixel_test.hpp"
 
 void foo(){
     TEST_ASSERT_EQUAL(true, true);
