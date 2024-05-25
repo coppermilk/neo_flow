@@ -96,10 +96,12 @@ void drawCenterImg(const std::vector<std::vector<uint16_t>> &imgMatrix)
 
 void setup()
 {
+
   matrix.setFont(&flow);
 
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("Initialization done.");
+   
   Image img;
   getImage("https://raw.githubusercontent.com/coppermilk/neo_flow/main/img/frames/12931_icon_thumb_12931_icon_thumb_12f_100ms.sprite.bmp", img);
   // Connect to WiFi
@@ -121,6 +123,7 @@ void setup()
 
   Serial.println(timeClient.getFormattedTime());
   Serial.println("WiFi connected");
+  
   matrix.fillScreen(0);
 }
 
@@ -311,6 +314,9 @@ void loop()
   {
 
     Calendar calendarActivity(daily,timeStamp, 8, 32, &matrix);
+    if(!calendarActivity.isEnable()){
+      continue;
+    }
     calendarActivity.drawCalendar();
     size_t frame = 0;
     unsigned long msInterval = 20 * 1000;
@@ -333,13 +339,15 @@ void loop()
     matrix.fillScreen(0);
     Serial.println("NextDayly");
   }
-#if 0
+
   Serial.println("NextStep");
 
   ImageDatabase db;
   JsonArray accumulate_progress = doc[JSON_LIST_ACCUMULATE_PROGRESS];
   for (JsonObject obj : accumulate_progress)
   {
+    bool enable = obj[JSON_ENABLE].as<bool>();
+    if(!enable){continue;}
     const char *activity_name = obj[JSON_NAME];
     const char *color = obj[JSON_COLOR];
     const char *img_url = obj[JSON_IMG_URL];
@@ -373,6 +381,8 @@ void loop()
   JsonArray info_string = doc[JSON_LIST_INFO_STRING];
   for (JsonObject obj : info_string)
   {
+    bool enable = obj[JSON_ENABLE].as<bool>();
+    if(!enable){continue;}
     const char *activity_name = obj[JSON_NAME];
     const char *color = obj[JSON_COLOR];
     String value = obj[JSON_VALUE].as<String>(); // Parse value as float
@@ -404,6 +414,7 @@ void loop()
       Serial.println("NextDayly");
     }
   }
-  #endif
+ 
   matrix.fillScreen(0);
+
 }

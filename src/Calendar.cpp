@@ -150,6 +150,7 @@ void Calendar::update(const JsonObject &json)
 {
   extractValues(json);
   extractName(json);
+  extractEnable(json);
   extractPixelColor(json);
   extractIconUrl(json);
   extractWeekdays(json);
@@ -178,6 +179,11 @@ void Calendar::extractValues(const JsonObject &json)
 void Calendar::extractName(const JsonObject &json)
 {
   _name = json[JSON_NAME].as<String>();
+}
+
+void Calendar::extractEnable(const JsonObject & json)
+{
+  _enable = json[JSON_ENABLE].as<bool>();
 }
 
 void Calendar::extractPixelColor(const JsonObject &json)
@@ -277,4 +283,9 @@ bool Calendar::isNeedValueInWeekday(int weekDay)
   default:
     return false;
   }
+}
+
+bool Calendar::isEnable()
+{
+  return _enable;
 }

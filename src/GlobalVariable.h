@@ -5,6 +5,7 @@ constexpr auto JSON_LIST_INFO_STRING         = "infoString";
 constexpr auto JSON_LIST_ACCUMULATE_PROGRESS = "accumulateProgress";
 
 constexpr auto JSON_NAME       = "name";
+constexpr auto JSON_ENABLE     = "enable";
 constexpr auto JSON_IMG_URL    = "imgUrl";
 constexpr auto JSON_COLOR      = "color";
 constexpr auto JSON_COLOR_MIN  = "colorMin";

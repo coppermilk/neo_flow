@@ -27,6 +27,7 @@ public:
 
   bool isNeedTodayNotification();
   bool isNeedValueInWeekday(int weekDay);
+  bool isEnable();
 
 private:
   void update(TimeStamp time);
@@ -34,6 +35,7 @@ private:
 
   void extractValues(const JsonObject &json);
   void extractName(const JsonObject &json);
+  void extractEnable(const JsonObject& json);
   void extractPixelColor(const JsonObject &json);
   void extractIconUrl(const JsonObject &json);
   void extractWeekdays(const JsonObject &json);
@@ -55,6 +57,7 @@ private:
 
   TimeStamp _today;
   String _name;
+  bool _enable = false;
   std::map<TimeStamp, Value> _timeStampToValue;
 
   unsigned _rows;
