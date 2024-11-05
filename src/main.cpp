@@ -55,6 +55,9 @@ struct BoardCore
 
 void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const Align a = Align::left);
 void getImage(const String &fileName, Image &img);
+uint16_t ramp(uint16_t pixelValue);
+
+class AnimationControl; 
 
 void drawCentreString(String buf, int x = 0, int y = 8)
 {
@@ -99,8 +102,106 @@ void drawCenterImg(const std::vector<std::vector<uint16_t>> &imgMatrix)
     }
   }
 }
-
 #endif
+
+
+class AnimationControl
+{
+
+  size_t frame = 0;
+  const unsigned long notificationInterval = 20000; // 20 seconds
+  unsigned long startTime = millis();
+public:
+static void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, int xOffset, int yOffset)
+{
+  auto &info = imgMatrix.info;
+
+  if (imgMatrix.info.isSprite)
+  {
+    const unsigned long msInterval = info.msFrameDuration;
+
+    // while (true)
+    //{
+    unsigned long msCurrent = millis();
+
+    if (msCurrent - msPrevious >= msInterval)
+    {
+      msPrevious = msCurrent;
+      // Increment frame and wrap around
+      frame = (frame + 1) % info.cntFrames;
+
+      for (size_t x = 0; x < info.w; ++x)
+      {
+        for (size_t y = 0; y < info.h; ++y)
+        {
+          auto color = imgMatrix.img[x + (frame * info.w)][y];
+          color = ramp(color);
+          core.matrix.drawPixel(xOffset + x, yOffset + y, color);
+        }
+      }
+    }
+  }
+  else
+  {
+    for (size_t x = 0; x < info.w; ++x)
+    {
+      for (size_t y = 0; y < info.h; ++y)
+      {
+        auto color = imgMatrix.img[x][y];
+        core.matrix.drawPixel(xOffset + x, yOffset + y, color);
+      }
+    }
+  }
+}
+
+static void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const Align align)
+{
+
+  auto &info = imgMatrix.info;
+  int xOffset = 0;
+  int yOffset = 0;
+  switch (align)
+  {
+  case Align::center:
+  {
+    xOffset = ((core.matrix.width() - info.w) / 2);
+    yOffset = 0;
+    break;
+  }
+  case Align::left:
+  {
+    xOffset = 0;
+    yOffset = 0;
+    break;
+  }
+  case Align::right:
+  {
+    xOffset = core.matrix.width() - info.w + 0;
+    yOffset = core.matrix.height() - info.h + 0;
+    break;
+  }
+  }
+  drawImage(imgMatrix, msPrevious, frame, xOffset, yOffset);
+}
+
+
+  void play(Image & iconImage)
+  {
+    while (millis() < startTime + notificationInterval)
+    {
+      // Draw the icon image
+      drawImage(iconImage, core.msGlobalPrevious, frame, left);
+
+      // Update the display
+      core.matrix.show();
+    }
+  }
+
+
+};
+
+
+
 void setup()
 {
 
@@ -117,7 +218,7 @@ void setup()
   size_t frame = 0;
   while (WiFi.status() != WL_CONNECTED)
   {
-    drawImage(img, core.msGlobalPrevious, frame, center);
+    AnimationControl::drawImage(img, core.msGlobalPrevious, frame, center);
     Serial.print(".");
     core.matrix.show();
   }
@@ -175,77 +276,9 @@ void getImage(const String &fileName, Image &img)
   core.imageDatabase.createImageMatrix(fileName, img);
 }
 
-void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, int xOffset, int yOffset)
-{
-  auto &info = imgMatrix.info;
 
-  if (imgMatrix.info.isSprite)
-  {
-    const unsigned long msInterval = info.msFrameDuration;
 
-    // while (true)
-    //{
-    unsigned long msCurrent = millis();
 
-    if (msCurrent - msPrevious >= msInterval)
-    {
-      msPrevious = msCurrent;
-      // Increment frame and wrap around
-      frame = (frame + 1) % info.cntFrames;
-
-      for (size_t x = 0; x < info.w; ++x)
-      {
-        for (size_t y = 0; y < info.h; ++y)
-        {
-          auto color = imgMatrix.img[x + (frame * info.w)][y];
-          color = ramp(color);
-          core.matrix.drawPixel(xOffset + x, yOffset + y, color);
-        }
-      }
-    }
-  }
-  else
-  {
-    for (size_t x = 0; x < info.w; ++x)
-    {
-      for (size_t y = 0; y < info.h; ++y)
-      {
-        auto color = imgMatrix.img[x][y];
-        core.matrix.drawPixel(xOffset + x, yOffset + y, color);
-      }
-    }
-  }
-}
-
-void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const Align align)
-{
-
-  auto &info = imgMatrix.info;
-  int xOffset = 0;
-  int yOffset = 0;
-  switch (align)
-  {
-  case Align::center:
-  {
-    xOffset = ((core.matrix.width() - info.w) / 2);
-    yOffset = 0;
-    break;
-  }
-  case Align::left:
-  {
-    xOffset = 0;
-    yOffset = 0;
-    break;
-  }
-  case Align::right:
-  {
-    xOffset = core.matrix.width() - info.w + 0;
-    yOffset = core.matrix.height() - info.h + 0;
-    break;
-  }
-  }
-  drawImage(imgMatrix, msPrevious, frame, xOffset, yOffset);
-}
 
 void processDaily(const JsonObject &daily)
 {
@@ -273,10 +306,14 @@ void processDaily(const JsonObject &daily)
   Image iconImage;
   getImage(calendarActivity.getIconUrl(), iconImage);
 
+  AnimationControl player;
+  player.play(iconImage);
+
   // Refresh the calendar display
   // calendarActivity.drawCalendar();
 
   // Animation loop for the defined interval
+  #if 0
   while (millis() < startTime + notificationInterval)
   {
     // Display notification if needed
@@ -286,11 +323,12 @@ void processDaily(const JsonObject &daily)
     }
 
     // Draw the icon image
-    drawImage(iconImage, core.msGlobalPrevious, frame, left);
+    AnimationControl::drawImage(iconImage, core.msGlobalPrevious, frame, left);
 
     // Update the display
     core.matrix.show();
   }
+  # endif
 
   // Clear the display after the interval
   core.matrix.fillScreen(0);
@@ -315,17 +353,15 @@ void processAccumulateProgress(const JsonObject &accumulateProgress)
   auto colorDecimal = ImageConvector::HexRgbToDec(colorHex);
   Pixel pixelColor(colorDecimal);
 
-
-
-
   // Display image if a URL is provided
   if (imageUrl)
   {
     Image iconImage;
     size_t frame = 0;
     getImage(imageUrl, iconImage);
-    drawImage(iconImage, core.msGlobalPrevious, frame, center);
-
+    AnimationControl player;
+    player.play(iconImage);
+    //AnimationControl::drawImage(iconImage, core.msGlobalPrevious, frame, center);
   }
   // Draw background based on the accumulate progress value
   drawAccumulateProgressBackGround(progressValue, pixelColor.asUint16_t());
@@ -362,26 +398,31 @@ void processInfoString(const JsonObject &infoString)
   {
     Image iconImage;
     getImage(imageUrl, iconImage);
+    AnimationControl player;
+    
+    core.matrix.setCursor(iconImage.info.w + 1, iconImage.info.h); // Set cursor position
+    core.matrix.print(displayValue);
 
+    player.play(iconImage);
+  #if 0
     // Set up display parameters
     const unsigned long displayInterval = 20000; // 20 seconds
     unsigned long startTime = millis();
     size_t frame = 0;
 
     // Display the value text
-    core.matrix.setCursor(iconImage.info.w + 1, iconImage.info.h); // Set cursor position
-    core.matrix.print(displayValue);
+
 
     // Loop to display the image and text for the defined interval
     while (millis() < startTime + displayInterval)
     {
       // Reload and draw the image in each frame
-      drawImage(iconImage, core.msGlobalPrevious, frame, left);
+      AnimationControl::drawImage(iconImage, core.msGlobalPrevious, frame, left);
 
       // Show the updated display
       core.matrix.show();
     }
-
+  # endif;
     // Clear the display after interval
     core.matrix.fillScreen(0);
   }
