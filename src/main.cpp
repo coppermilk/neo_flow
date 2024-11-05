@@ -68,7 +68,7 @@ void drawCentreString(String buf, int x = 0, int y = 8)
   core.matrix.setCursor((core.matrix.width() - w / 2), y);
   core.matrix.print(buf);
 }
-
+#if 0
 void drawLeftrImg(const std::vector<std::vector<uint16_t>> &imgMatrix)
 {
   for (size_t x = 0; x < imgMatrix.size(); ++x)
@@ -100,6 +100,7 @@ void drawCenterImg(const std::vector<std::vector<uint16_t>> &imgMatrix)
   }
 }
 
+#endif
 void setup()
 {
 
@@ -132,7 +133,6 @@ void setup()
 
   core.matrix.fillScreen(0);
 }
-
 
 void drawAccumulateProgressBackGround(int pixel_count, uint16_t color)
 {
@@ -175,55 +175,10 @@ void getImage(const String &fileName, Image &img)
   core.imageDatabase.createImageMatrix(fileName, img);
 }
 
-void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const Align align)
+void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, int xOffset, int yOffset)
 {
-
-#if 0
-  Serial.println(imgMatrix.img.size());
-  Serial.print("Frame: ");
-  Serial.println(info.cntFrames);
-  Serial.print("Milliseconds: ");
-  Serial.println(info.msFrameDuration);
-
-  Serial.print("H: ");
-  Serial.println(info.h);
-  Serial.print("W: ");
-  Serial.println(info.w);
-  Serial.print("isSprite: ");
-  Serial.println(info.isSprite);
-#endif
   auto &info = imgMatrix.info;
-  int xOffset = 0;
-  int yOffset = 0;
-  switch (align)
-  {
-  case Align::center:
-  {
-    xOffset = ((core.matrix.width() - info.w) / 2);
-    yOffset = 0;
-    break;
-  }
-  case Align::left:
-  {
-    xOffset = 0;
-    yOffset = 0;
-    break;
-  }
-  case Align::right:
-  {
-    xOffset = core.matrix.width() - info.w + 0;
-    yOffset = core.matrix.height() - info.h + 0;
-    break;
-  }
 
-    // }
-  }
-#if 0
-  Serial.print("xOffset: ");
-  Serial.println(xOffset);
-  Serial.print("yOffset ");
-  Serial.println(yOffset);
-#endif
   if (imgMatrix.info.isSprite)
   {
     const unsigned long msInterval = info.msFrameDuration;
@@ -260,6 +215,36 @@ void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const
       }
     }
   }
+}
+
+void drawImage(Image &imgMatrix, unsigned long &msPrevious, size_t &frame, const Align align)
+{
+
+  auto &info = imgMatrix.info;
+  int xOffset = 0;
+  int yOffset = 0;
+  switch (align)
+  {
+  case Align::center:
+  {
+    xOffset = ((core.matrix.width() - info.w) / 2);
+    yOffset = 0;
+    break;
+  }
+  case Align::left:
+  {
+    xOffset = 0;
+    yOffset = 0;
+    break;
+  }
+  case Align::right:
+  {
+    xOffset = core.matrix.width() - info.w + 0;
+    yOffset = core.matrix.height() - info.h + 0;
+    break;
+  }
+  }
+  drawImage(imgMatrix, msPrevious, frame, xOffset, yOffset);
 }
 
 void processDaily(const JsonObject &daily)
@@ -330,28 +315,21 @@ void processAccumulateProgress(const JsonObject &accumulateProgress)
   auto colorDecimal = ImageConvector::HexRgbToDec(colorHex);
   Pixel pixelColor(colorDecimal);
 
-  // Draw background based on the accumulate progress value
-  drawAccumulateProgressBackGround(progressValue, pixelColor.asUint16_t());
+
+
 
   // Display image if a URL is provided
   if (imageUrl)
   {
     Image iconImage;
-    core.imageDatabase.createImageMatrix(imageUrl, iconImage);
-    drawCenterImg(iconImage.img);
+    size_t frame = 0;
+    getImage(imageUrl, iconImage);
+    drawImage(iconImage, core.msGlobalPrevious, frame, center);
+
   }
-#if 0
-    // Debug output to Serial
-    Serial.print("Image URL: ");
-    Serial.println(imageUrl);
-    Serial.print("Activity Name: ");
-    Serial.println(activityName);
-    Serial.print("Color (Hex): ");
-    Serial.println(colorHex);
-    Serial.print("Progress Value: ");
-    Serial.println(progressValue);
-    Serial.println();
-#endif
+  // Draw background based on the accumulate progress value
+  drawAccumulateProgressBackGround(progressValue, pixelColor.asUint16_t());
+
   // Show the updated matrix display
   core.matrix.show();
 
@@ -383,7 +361,7 @@ void processInfoString(const JsonObject &infoString)
   if (imageUrl)
   {
     Image iconImage;
-    core.imageDatabase.createImageMatrix(imageUrl, iconImage);
+    getImage(imageUrl, iconImage);
 
     // Set up display parameters
     const unsigned long displayInterval = 20000; // 20 seconds
@@ -391,14 +369,13 @@ void processInfoString(const JsonObject &infoString)
     size_t frame = 0;
 
     // Display the value text
-    core.matrix.setCursor(9, 8); // Set cursor position
+    core.matrix.setCursor(iconImage.info.w + 1, iconImage.info.h); // Set cursor position
     core.matrix.print(displayValue);
 
     // Loop to display the image and text for the defined interval
     while (millis() < startTime + displayInterval)
     {
       // Reload and draw the image in each frame
-      getImage(imageUrl, iconImage);
       drawImage(iconImage, core.msGlobalPrevious, frame, left);
 
       // Show the updated display
