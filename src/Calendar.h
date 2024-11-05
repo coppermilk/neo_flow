@@ -20,7 +20,7 @@ public:
 
   void fill_calendarDEBUG();
 
-  String getIcon();
+  String getIconUrl();
 
   int getXToday();
   int getYToday();

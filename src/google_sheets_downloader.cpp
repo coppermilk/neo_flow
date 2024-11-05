@@ -5,6 +5,7 @@
 
 GoogleSheetsDownloader::GoogleSheetsDownloader(const String &deployment_id){
   this->deployment_id = deployment_id;
+  update();
 }
 
 String GoogleSheetsDownloader::get_json() {
@@ -35,4 +36,23 @@ String GoogleSheetsDownloader::get_json() {
   }
   http.end();
   return payload;
+}
+
+JsonDocument GoogleSheetsDownloader::getDocument()
+{
+  return doc;
+}
+
+void GoogleSheetsDownloader::update()
+{
+  String json_str = get_json();
+  Serial.println(json_str);
+  
+  DeserializationError error = deserializeJson(doc, json_str);
+
+  if (error)
+  {
+    Serial.print("deserializeJson() failed: ");
+    Serial.println(error.f_str());
+  }
 }

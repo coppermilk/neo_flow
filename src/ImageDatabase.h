@@ -1,7 +1,8 @@
 #pragma once
 #include <Arduino.h>
 #include <vector>
-#include "Image.h"
+#include <SdCard.h>
+#include <Image.h>
 class ImageDatabase
 {
     public:
@@ -13,4 +14,6 @@ class ImageDatabase
     int dirtyStringToInt(const String &inputString);
     String getFileNameWithoutFormat(String str);
     ImageInfo getImgInfoFromFileName(const String &fileName, ImageInfo &info);
+
+     SdCard sd;
 };

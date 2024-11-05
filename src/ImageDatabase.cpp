@@ -8,7 +8,6 @@
 bool ImageDatabase::isImgUrlExistInDatabase(String str)
 {
     FileDownloader downloader;
-    SdCard sd;
     String fileName = FileNamingHelper::urlToFileName(str);
     String fullName = GetDirectoryNameByFileFormat(fileName) + fileName;
     return sd.fileExst(fullName.c_str());
@@ -21,7 +20,7 @@ void ImageDatabase::createImageMatrix(String url, Image &img)
         return;
     }
 
-    SdCard sd;
+
     String fileName = FileNamingHelper::urlToFileName(url);
     String dirName = GetDirectoryNameByFileFormat(fileName);
     if (!isImgUrlExistInDatabase(url))

@@ -242,7 +242,7 @@ Pixel Calendar::map(int x, int inMin, int inMax, Pixel &outMin, Pixel &outMax)
   }
 }
 
-String Calendar::getIcon()
+String Calendar::getIconUrl()
 {
   return _iconUrl;
 }
